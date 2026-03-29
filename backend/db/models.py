@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime
 
 from sqlalchemy import (
     Column,
@@ -102,8 +102,13 @@ class Booking(Base):
     check_in = Column(Date, nullable=False, index=True)
     check_out = Column(Date, nullable=False, index=True)
     guests = Column(Integer, nullable=False)
-
+    
+    booked_price_per_night = Column(Float, nullable=False)
+    total_price = Column(Float, nullable=False)
+    currency = Column(String, nullable=False, default="USD")
+    
     status = Column(String, nullable=False, default="confirmed", index=True)
+    payment_transaction_id = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     hotel = relationship("Hotel", back_populates="bookings")

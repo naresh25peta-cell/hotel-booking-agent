@@ -2,12 +2,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install uv
+# System libraries required by psycopg[binary]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
 
 COPY pyproject.toml .
 
-# Install only dependencies not the project itself
-RUN uv pip install --system fastapi uvicorn sqlalchemy streamlit langchain langchain-openai langgraph langfuse openai python-dotenv pydantic pydantic-settings loguru requests mlflow
+# Parse pyproject.toml and install all declared dependencies
+RUN python3 -c "import tomllib; deps=tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']; open('/tmp/reqs.txt','w').write('\n'.join(deps))" && \
+    pip install --no-cache-dir -r /tmp/reqs.txt
 
 COPY . .
 

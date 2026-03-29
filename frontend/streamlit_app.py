@@ -1,7 +1,10 @@
+import os
+import uuid
 import streamlit as st
 import requests
 
-CHAT_URL = "http://127.0.0.1:8000/chat"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+CHAT_URL = f"{API_URL}/chat"
 
 st.set_page_config(
     page_title="Hotel Booking Agent",
@@ -41,6 +44,8 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 if "profile_set" not in st.session_state:
     st.session_state.profile_set = False
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
 
 st.title("🏨 Hotel Booking Agent")
 st.caption("Powered by AI Agents — Search + Availability + Booking")
@@ -74,6 +79,7 @@ with st.sidebar:
 
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
+        st.session_state.session_id = str(uuid.uuid4())
         st.rerun()
 
     st.divider()
@@ -149,13 +155,19 @@ if user_input:
                     json={
                         "message": user_input,
                         "user_name": st.session_state.user_name,
-                        "user_email": st.session_state.user_email
+                        "user_email": st.session_state.user_email,
+                        "session_id": st.session_state.session_id
                     }
                 )
 
                 if response.status_code == 200:
                     data = response.json()
                     agent_reply = data.get("response", "❌ Backend returned no response field.")
+
+                    # keep backend-generated session_id if returned
+                    returned_session_id = data.get("session_id")
+                    if returned_session_id:
+                        st.session_state.session_id = returned_session_id
                 else:
                     agent_reply = f"❌ Backend error: {response.status_code} - {response.text}"
 
