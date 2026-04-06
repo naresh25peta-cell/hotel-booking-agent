@@ -9,6 +9,7 @@ from backend.tools.price_tools import calculate_price
 from backend.tools.payment_tools import process_payment
 from backend.tools.booking_tools import create_booking
 from backend.utils.logger import logger
+from backend.evaluation.payment_evaluator import evaluate_payment
 
 
 # ── Base LLM ──────────────────────────────────
@@ -81,6 +82,41 @@ def _extract_transaction_id(messages: list) -> str:
     return "N/A"
 
 
+def _build_payment_result_from_messages(messages: list) -> dict:
+    """
+    Reconstruct a payment_result dict from the tool message content so the
+    evaluator has structured data without storing extra state.
+    """
+    result: dict = {}
+    for msg in reversed(messages):
+        content = getattr(msg, "content", "") or ""
+
+        txn_match = re.search(r"TXN-[A-F0-9]{12}", content)
+        if txn_match:
+            result["transaction_id"] = txn_match.group(0)
+            result["success"] = True
+
+        amount_match = re.search(r"£([\d.]+)", content)
+        if amount_match:
+            result["amount"] = float(amount_match.group(1))
+
+        currency_match = re.search(r"£[\d.]+ ([A-Z]{3})", content)
+        if currency_match:
+            result["currency"] = currency_match.group(1)
+
+        card_match = re.search(r"\*{4}(\d{4})", content)
+        if card_match:
+            result["card_last4"] = card_match.group(1)
+
+        if result.get("transaction_id"):
+            break
+
+    if not result:
+        result = {"success": False}
+
+    return result
+
+
 @observe(name="booking_agent")
 def run_booking_agent(state: dict) -> dict:
     booking_step = state.get("booking_step") or ""
@@ -146,6 +182,20 @@ def run_booking_agent(state: dict) -> dict:
         langfuse_context.update_current_observation(
             output={"step": "confirmation", "content": response.content}
         )
+
+        # ── Payment evaluation (fire-and-forget, never blocks the user) ────────
+        try:
+            trace_id = langfuse_context.get_current_trace_id()
+            payment_result = _build_payment_result_from_messages(state["messages"])
+            evaluate_payment(
+                agent_response=response.content,
+                payment_result=payment_result,
+                latency_s=state.get("payment_latency_s", 0.0),
+                trace_id=trace_id,
+            )
+        except Exception as _eval_err:
+            logger.warning(f"⚠️  Payment evaluation error (non-fatal): {_eval_err}")
+
         return {"messages": [response], "booking_step": ""}
 
     # ── Fallback ───────────────────────────────────────────────────────────────

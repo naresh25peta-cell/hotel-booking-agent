@@ -23,6 +23,7 @@ class RoutingDecision(BaseModel):
     check_out: Optional[str] = None
     guests: Optional[int] = None
     room_type: Optional[str] = None
+    sort_by_price: bool = Field(default=False)
     missing_fields: list[str] = Field(default_factory=list)
 
 
@@ -58,6 +59,7 @@ Field extraction rules:
 - check_in/check_out: only if clearly given
 - guests: integer only if clearly given
 - room_type: only if explicitly stated
+- sort_by_price: true if user mentions cheap, budget, affordable, cheapest, lowest price, or best value
 - missing_fields: list only the fields required for the chosen action
 
 Routing rules:
@@ -160,6 +162,7 @@ def _post_validate_decision(state: dict, decision: RoutingDecision) -> dict:
         "check_out": decision.check_out or state.get("check_out"),
         "guests": decision.guests or state.get("guests"),
         "room_type": decision.room_type or state.get("room_type"),
+        "sort_by_price": decision.sort_by_price or state.get("sort_by_price", False),
         "missing_fields": missing_fields,
         "selected_agent": selected_agent,
     }

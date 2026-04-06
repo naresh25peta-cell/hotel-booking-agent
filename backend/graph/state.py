@@ -25,6 +25,7 @@ class HotelAgentState(TypedDict, total=False):
     check_out: Optional[str]
     guests: Optional[int]
     room_type: Optional[str]
+    sort_by_price: Optional[bool]
 
     missing_fields: List[str]
     guardrail_flags: List[str]

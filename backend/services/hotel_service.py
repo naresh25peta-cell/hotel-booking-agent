@@ -1,14 +1,22 @@
 from datetime import date
+from sqlalchemy.orm import joinedload
 from backend.db.database import SessionLocal
 from backend.db.models import Hotel, RoomType, Booking
 
 
-def get_hotels_by_location(location: str):
+def get_hotels_by_location(location: str, sort_by_price: bool = False):
     db = SessionLocal()
     try:
-        hotels = db.query(Hotel).filter(
-            Hotel.location.ilike(f"%{location}%")
-        ).all()
+        hotels = (
+            db.query(Hotel)
+            .options(joinedload(Hotel.room_types))
+            .filter(Hotel.location.ilike(f"%{location}%"))
+            .all()
+        )
+        if sort_by_price:
+            hotels.sort(key=lambda h: min(
+                (r.price_per_night for r in h.room_types), default=float("inf")
+            ))
         return hotels
     finally:
         db.close()
