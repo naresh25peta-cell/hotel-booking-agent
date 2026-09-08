@@ -25,3 +25,18 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# MLflow tracking data (local experiment runs, not source)
+mlruns/
+
+# Test/coverage artifacts
+.coverage
+.pytest_cache/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Claude Code local settings
+.claude/settings.local.json
