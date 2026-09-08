@@ -65,6 +65,7 @@ backend/
   utils/           # logging, langfuse compatibility shim
 frontend/
   streamlit_app.py # chat UI
+scripts/           # manual dev utilities (connection checks, DB inspection) — not part of CI
 tests/
   unit/            # per-service/agent unit tests
   integration/      # end-to-end API/chat flow tests
