@@ -1,9 +1,8 @@
 [run]
 source = backend
 omit =
-    backend/api2.py
+    backend/api/api_v1_draft.py
     backend/db/seed.py
-    backend/db/checkdb.py
     backend/agents/availability_agent.py
     backend/agents/search_agent.py
     backend/graph/routers.py
