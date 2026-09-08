@@ -36,6 +36,22 @@ The core is a [LangGraph](https://github.com/langchain-ai/langgraph) state machi
 
 Each agent's tool calls loop back through the graph until the turn resolves, so a booking can span multiple messages (e.g. "book the Deluxe room" → price shown → card details → confirmed).
 
+## Evaluation
+
+Every agent response is scored automatically, not just logged. Two evaluators run in the background and post their scores directly onto the Langfuse trace, so quality is visible per-conversation in the observability dashboard, not just in aggregate.
+
+**General response evaluator** (`backend/evaluation/evaluator.py`) — LLM-as-judge. A separate judge LLM call (temperature 0, for consistent scoring) rates every agent response on:
+- `relevance` — does it address the user's actual query?
+- `helpfulness` — is it actionable, not just correct?
+- `accuracy` — any hallucinated hotel names, prices, or booking details?
+
+**Payment evaluator** (`backend/evaluation/payment_evaluator.py`) — two layers, because payment confirmations need both hard guarantees and semantic quality:
+
+- *Rule-based (deterministic, no LLM cost)*: transaction ID present, full card number never echoed back (masking check), charged amount matches what's shown to the user, and the payment tool responded within a 3-second SLA.
+- *LLM-as-judge*: confirmation message clarity, whether payment failures are explained with actionable next steps, and a dedicated PCI-safety check that the full card number never leaks into agent output.
+
+Rule-based checks catch hard failures for free; the LLM layer catches the softer stuff (a technically-correct confirmation that reads terribly, or a failure message that leaves the user stuck). Both post their scores to Langfuse per trace, so a specific bad conversation can be traced back to exactly which dimension failed.
+
 ## Tech stack
 
 | Layer | Tools |
